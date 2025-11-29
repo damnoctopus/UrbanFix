@@ -21,6 +21,12 @@ class _MyComplaintsScreenState extends State<MyComplaintsScreen> {
     _load();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _load(); // Reload data each time this screen comes to foreground
+  }
+
   Future<void> _load() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (!auth.isAuthenticated || auth.userId == null) {

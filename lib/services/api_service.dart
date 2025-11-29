@@ -12,12 +12,13 @@ import 'mock_api_service.dart';
 final String baseUrl = _determineBaseUrl();
 
 String _determineBaseUrl() {
-  const int port = 8000; // change this to your local server port
-  if (kIsWeb) return 'http://localhost:$port';
+  const int port = 8000;
+  // It must end with /api because the controller is at /api/meta
+  if (kIsWeb) return 'http://localhost:$port/api'; 
   try {
-    if (Platform.isAndroid) return 'http://10.0.2.2:$port';
+    if (Platform.isAndroid) return 'http://10.0.2.2:$port/api';
   } catch (_) {}
-  return 'http://localhost:$port';
+  return 'http://localhost:$port/api';
 }
 
 // Disable mock by default so app connects to local server.
@@ -41,20 +42,33 @@ class ApiService {
     return null;
   }
 
-  static Future<Map<String, dynamic>?> register(String name, String email, String password) async {
-    if (_useMock) return MockApiService.register(name, email, password);
-    try {
-      final res = await http.post(Uri.parse('$baseUrl/auth/register'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'name': name, 'email': email, 'password': password})).timeout(const Duration(seconds: 15));
-      if (res.statusCode == 200 || res.statusCode == 201) {
-        return jsonDecode(res.body) as Map<String, dynamic>;
-      }
-    } catch (e) {
-      // ignore
+  // lib/services/api_service.dart
+
+// In lib/services/api_service.dart
+
+static Future<Map<String, dynamic>?> register(String name, String email, String password) async {
+  try {
+    final res = await http.post(
+      Uri.parse('$baseUrl/auth/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'name': name, 'email': email, 'password': password})
+    );
+
+    // --- ADD THIS TO DEBUG ---
+    if (res.statusCode != 200 && res.statusCode != 201) {
+      print('❌ FAILED: ${res.statusCode}');
+      print('❌ REASON: ${res.body}'); // This will say "Email already in use"
     }
-    return null;
+    // -------------------------
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    }
+  } catch (e) {
+    print('Network Error: $e');
   }
+  return null;
+}
 
   // Meta
   static Future<List<dynamic>> getCategories({String? token}) async {

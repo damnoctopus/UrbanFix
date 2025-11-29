@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/api_service.dart';
 import '../widgets/complaint_card.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -43,7 +44,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context);
     return Scaffold(
       appBar: AppBar(title: const Text('UrbanFix')),
       body: _pages[_selectedIndex],
@@ -64,19 +64,49 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _HomeView extends StatelessWidget {
-  const _HomeView({super.key});
+class _HomeView extends StatefulWidget {
+  const _HomeView();
+
+  @override
+  State<_HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<_HomeView> {
+  List<dynamic> _items = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (!auth.isAuthenticated || auth.userId == null) {
+      setState(() { _loading = false; _items = []; });
+      return;
+    }
+    final items = await ApiService.getUserComplaints(auth.userId!, token: auth.token);
+    setState(() { _items = items; _loading = false; });
+  }
+
+  Future<void> _refresh() async {
+    await _load();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // For demo, we show static recent complaints. In real app fetch from API.
     return Padding(
       padding: const EdgeInsets.all(12.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ElevatedButton(
-            onPressed: () => Navigator.pushNamed(context, '/report'),
+            onPressed: () async {
+              await Navigator.pushNamed(context, '/report');
+              _refresh(); // Reload after reporting new issue
+            },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3F8CFF), foregroundColor: Colors.white),
             child: const Padding(padding: EdgeInsets.symmetric(vertical: 14.0), child: Text('Report Issue')),
           ),
@@ -84,10 +114,21 @@ class _HomeView extends StatelessWidget {
           const Text('Recent complaints', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Expanded(
-            child: ListView.builder(
-              itemCount: 3,
-              itemBuilder: (_, i) => ComplaintCard.sample(i),
-            ),
+            child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _items.isEmpty
+              ? const Center(child: Text('No complaints yet'))
+              : RefreshIndicator(
+                  onRefresh: _refresh,
+                  child: ListView.builder(
+                    itemCount: _items.length,
+                    itemBuilder: (_, i) => ComplaintCard(
+                      category: _items[i]['category'] ?? 'Issue',
+                      status: _items[i]['status'] ?? 'Reported',
+                      date: _items[i]['created_at'] ?? '',
+                    ),
+                  ),
+                ),
           )
         ],
       ),

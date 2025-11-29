@@ -8,7 +8,8 @@ plugins {
 android {
     namespace = "com.example.urbanfix"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // Use NDK 27 as recommended by some plugins for compatibility
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
