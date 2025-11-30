@@ -31,10 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.pushNamed(context, '/my');
         break;
       case 2:
-        Navigator.pushNamed(context, '/report').then((_) {
-          // Reset to home after reporting
-          setState(() => _selectedIndex = 0);
-        });
+        Navigator.pushNamed(context, '/report');
         break;
       case 3:
         Navigator.pushNamed(context, '/notifications');
@@ -48,19 +45,19 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: const Text('UrbanFix')),
       body: _pages[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onTap,
-        backgroundColor: Colors.white,
-        elevation: 3,
-        // FIX: Replaced invalid icons and ensured all are standard constants
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.list_alt), label: 'My Lists'),
-          NavigationDestination(icon: Icon(Icons.add_a_photo_outlined), label: 'Report'), // Note: If add_a_photo_outlined is missing in your SDK, use add_a_photo
-          NavigationDestination(icon: Icon(Icons.notifications_outlined), label: 'Alerts'),
-          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+      bottomNavigationBar: BottomNavigationBar(
+        selectedItemColor: const Color(0xFF3F8CFF),
+        unselectedItemColor: Colors.grey,
+        currentIndex: _selectedIndex,
+        onTap: _onTap,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.list), label: 'My Complaints'),
+          BottomNavigationBarItem(icon: Icon(Icons.add_a_photo), label: 'Report'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Notifications'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
@@ -100,57 +97,40 @@ class _HomeViewState extends State<_HomeView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await Navigator.pushNamed(context, '/report');
-          _refresh();
-        },
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        // FIX: Changed Icons.add_camera (invalid) to Icons.add_a_photo (valid)
-        icon: const Icon(Icons.add_a_photo), 
-        label: const Text('Report Issue'),
-      ),
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          SliverAppBar(
-            floating: true,
-            snap: true,
-            title: const Text('UrbanFix', style: TextStyle(fontWeight: FontWeight.w800)),
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.white,
+    return Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ElevatedButton(
+            onPressed: () async {
+              await Navigator.pushNamed(context, '/report');
+              _refresh(); // Reload after reporting new issue
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3F8CFF), foregroundColor: Colors.white),
+            child: const Padding(padding: EdgeInsets.symmetric(vertical: 14.0), child: Text('Report Issue')),
           ),
-        ],
-        body: RefreshIndicator(
-          onRefresh: _refresh,
-          child: _loading
+          const SizedBox(height: 12),
+          const Text('Recent complaints', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Expanded(
+            child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _items.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.check_circle_outline, size: 80, color: Colors.grey.shade300),
-                          const SizedBox(height: 16),
-                          Text('No complaints yet', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      itemCount: _items.length,
-                      itemBuilder: (_, i) {
-                        final item = _items[i];
-                        return ComplaintCard(
-                          category: item['department'] ?? item['category'] ?? 'Issue',
-                          status: item['status'] ?? 'Reported',
-                          imagePath: item['imagePath'] ?? item['image_url'],
-                          date: item['created_at'] ?? '',
-                        );
-                      },
+              ? const Center(child: Text('No complaints yet'))
+              : RefreshIndicator(
+                  onRefresh: _refresh,
+                  child: ListView.builder(
+                    itemCount: _items.length,
+                    itemBuilder: (_, i) => ComplaintCard(
+                      category: _items[i]['category'] ?? 'Issue',
+                      status: _items[i]['status'] ?? 'Reported',
+                      date: _items[i]['created_at'] ?? '',
                     ),
-        ),
+                  ),
+                ),
+          )
+        ],
       ),
     );
   }
