@@ -1,28 +1,14 @@
+// dart
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart';
 import 'mock_api_service.dart';
 
-// Configure your backend base URL here. For local development:
-// - Android emulator: use 10.0.2.2 (maps to host localhost)
-// - iOS simulator / web / desktop: use localhost
-// Update the port below to match your local server port (e.g. 8000).
-final String baseUrl = _determineBaseUrl();
+// Aligns with the Spring Boot API structure
+const String baseUrl = 'http://15.207.115.58:8000/api';
 
-String _determineBaseUrl() {
-  const int port = 8000;
-  // It must end with /api because the controller is at /api/meta
-  if (kIsWeb) return 'http://localhost:$port/api'; 
-  try {
-    if (Platform.isAndroid) return 'http://10.0.2.2:$port/api';
-  } catch (_) {}
-  return 'http://localhost:$port/api';
-}
-
-// Disable mock by default so app connects to local server.
-// Set to true if you want to use the built-in mock service instead.
+// Disable mock by default so app connects to real server.
 final bool _useMock = false;
 
 class ApiService {
@@ -30,45 +16,36 @@ class ApiService {
   static Future<Map<String, dynamic>?> login(String email, String password) async {
     if (_useMock) return MockApiService.login(email, password);
     try {
-      final res = await http.post(Uri.parse('$baseUrl/auth/login'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'email': email, 'password': password})).timeout(const Duration(seconds: 15));
+      final res = await http
+          .post(Uri.parse('$baseUrl/auth/login'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'email': email, 'password': password}))
+          .timeout(const Duration(seconds: 15));
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as Map<String, dynamic>;
       }
     } catch (e) {
-      // ignore
+      // ignore or log
     }
     return null;
   }
 
-  // lib/services/api_service.dart
-
-// In lib/services/api_service.dart
-
-static Future<Map<String, dynamic>?> register(String name, String email, String password) async {
-  try {
-    final res = await http.post(
-      Uri.parse('$baseUrl/auth/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'name': name, 'email': email, 'password': password})
-    );
-
-    // --- ADD THIS TO DEBUG ---
-    if (res.statusCode != 200 && res.statusCode != 201) {
-      print('❌ FAILED: ${res.statusCode}');
-      print('❌ REASON: ${res.body}'); // This will say "Email already in use"
+  static Future<Map<String, dynamic>?> register(String name, String email, String password) async {
+    if (_useMock) return MockApiService.register(name, email, password);
+    try {
+      final res = await http
+          .post(Uri.parse('$baseUrl/auth/register'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'name': name, 'email': email, 'password': password}))
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      // ignore or log
     }
-    // -------------------------
-
-    if (res.statusCode == 200 || res.statusCode == 201) {
-      return jsonDecode(res.body) as Map<String, dynamic>;
-    }
-  } catch (e) {
-    print('Network Error: $e');
+    return null;
   }
-  return null;
-}
 
   // Meta
   static Future<List<dynamic>> getCategories({String? token}) async {
@@ -79,7 +56,7 @@ static Future<Map<String, dynamic>?> register(String name, String email, String 
         return jsonDecode(res.body) as List<dynamic>;
       }
     } catch (e) {
-      // ignore
+      // ignore or log
     }
     return [];
   }
@@ -90,7 +67,8 @@ static Future<Map<String, dynamic>?> register(String name, String email, String 
     try {
       final uri = Uri.parse('$baseUrl/complaints');
       final request = http.MultipartRequest('POST', uri);
-      request.headers.addAll({'Authorization': 'Bearer $token'});
+      // include standard auth headers (Accept + Authorization)
+      request.headers.addAll(_auth(token));
       fields.forEach((k, v) => request.fields[k] = v);
       if (image != null) {
         request.files.add(await http.MultipartFile.fromPath('image', image.path));
@@ -101,7 +79,7 @@ static Future<Map<String, dynamic>?> register(String name, String email, String 
         return jsonDecode(res.body) as Map<String, dynamic>;
       }
     } catch (e) {
-      // ignore
+      // ignore or log
     }
     return null;
   }
@@ -114,7 +92,7 @@ static Future<Map<String, dynamic>?> register(String name, String email, String 
         return jsonDecode(res.body) as List<dynamic>;
       }
     } catch (e) {
-      // ignore
+      // ignore or log
     }
     return [];
   }
@@ -126,7 +104,9 @@ static Future<Map<String, dynamic>?> register(String name, String email, String 
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as Map<String, dynamic>;
       }
-    } catch (e) {}
+    } catch (e) {
+      // ignore or log
+    }
     return null;
   }
 
@@ -137,16 +117,21 @@ static Future<Map<String, dynamic>?> register(String name, String email, String 
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as List<dynamic>;
       }
-    } catch (e) {}
+    } catch (e) {
+      // ignore or log
+    }
     return [];
   }
 
   static Future<bool> postFeedback(int id, Map<String, dynamic> payload, {String? token}) async {
     if (_useMock) return MockApiService.postFeedback(id, payload);
     try {
-      final res = await http.post(Uri.parse('$baseUrl/complaints/$id/feedback'), headers: _auth(token)..addAll({'Content-Type':'application/json'}), body: jsonEncode(payload)).timeout(const Duration(seconds: 15));
+      final headers = _auth(token)..addAll({'Content-Type': 'application/json'});
+      final res = await http.post(Uri.parse('$baseUrl/complaints/$id/feedback'), headers: headers, body: jsonEncode(payload)).timeout(const Duration(seconds: 15));
       return res.statusCode == 200 || res.statusCode == 201;
-    } catch (e) {}
+    } catch (e) {
+      // ignore or log
+    }
     return false;
   }
 
@@ -156,13 +141,15 @@ static Future<Map<String, dynamic>?> register(String name, String email, String 
     try {
       final res = await http.get(Uri.parse('$baseUrl/notifications/$userId'), headers: _auth(token)).timeout(const Duration(seconds: 15));
       if (res.statusCode == 200) return jsonDecode(res.body) as List<dynamic>;
-    } catch (e) {}
+    } catch (e) {
+      // ignore or log
+    }
     return [];
   }
 
   static Map<String, String> _auth(String? token) {
     final headers = <String, String>{'Accept': 'application/json'};
-    if (token != null) headers['Authorization'] = 'Bearer $token';
+    if (token != null && token.isNotEmpty) headers['Authorization'] = 'Bearer $token';
     return headers;
   }
 }
