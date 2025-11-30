@@ -41,25 +41,11 @@ class _MyComplaintsScreenState extends State<MyComplaintsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('My Complaints')),
-      body: _loading 
-        ? const Center(child: CircularProgressIndicator()) 
-        : _items.isEmpty 
-          ? const Center(child: Text('No complaints')) 
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: _items.length,
-              itemBuilder: (_, i) {
-                final item = _items[i];
-                return ComplaintCard(
-                  // FIX: Use department or category from API
-                  category: item['department'] ?? item['category'] ?? 'Issue',
-                  status: item['status'] ?? 'Reported',
-                  // FIX: Pass image path
-                  imagePath: item['imagePath'] ?? item['image_url'], 
-                  date: item['created_at'] ?? '',
-                );
-              },
-            ),
+      body: _loading ? const Center(child: CircularProgressIndicator()) : _items.isEmpty ? const Center(child: Text('No complaints')) : ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: _items.length,
+        itemBuilder: (_, i) => ComplaintCard(category: _items[i]['category'] ?? 'Issue', status: _items[i]['status'] ?? 'Reported', date: _items[i]['created_at'] ?? ''),
+      ),
     );
   }
 }
