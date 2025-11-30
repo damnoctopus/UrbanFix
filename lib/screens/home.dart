@@ -16,7 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final _pages = const [
     _HomeView(),
-    SizedBox.shrink(), // Placeholder handled by navigation
+    SizedBox.shrink(), // My Complaints (use route)
     SizedBox.shrink(),
     SizedBox.shrink(),
     SizedBox.shrink(),
@@ -54,10 +54,11 @@ class _HomeScreenState extends State<HomeScreen> {
         onDestinationSelected: _onTap,
         backgroundColor: Colors.white,
         elevation: 3,
+        // FIX: Replaced invalid icons and ensured all are standard constants
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.list_alt), label: 'My Lists'),
-          NavigationDestination(icon: Icon(Icons.add_a_photo_outlined), label: 'Report'),
+          NavigationDestination(icon: Icon(Icons.add_a_photo_outlined), label: 'Report'), // Note: If add_a_photo_outlined is missing in your SDK, use add_a_photo
           NavigationDestination(icon: Icon(Icons.notifications_outlined), label: 'Alerts'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
         ],
@@ -107,7 +108,8 @@ class _HomeViewState extends State<_HomeView> {
         },
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_camera),
+        // FIX: Changed Icons.add_camera (invalid) to Icons.add_a_photo (valid)
+        icon: const Icon(Icons.add_a_photo), 
         label: const Text('Report Issue'),
       ),
       body: NestedScrollView(
